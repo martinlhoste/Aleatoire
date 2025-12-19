@@ -389,8 +389,12 @@
             <div class="settings-content">
                 <h2>OPTIONS</h2>
                 <div class="toggle-option">
-                    <span>🎲 Mode chance</span>
-                    <div class="toggle" id="cheat-toggle"></div>
+                    <span>🍀 Jamais choisi</span>
+                    <div class="toggle" id="never-toggle"></div>
+                </div>
+                <div class="toggle-option">
+                    <span>🎯 Toujours choisi</span>
+                    <div class="toggle" id="always-toggle"></div>
                 </div>
                 <button class="close-settings" id="close-settings">OK</button>
             </div>
@@ -422,7 +426,8 @@
         const resetBtn = document.getElementById('reset-btn');
         const settingsBtn = document.getElementById('settings-btn');
         const settingsModal = document.getElementById('settings-modal');
-        const cheatToggle = document.getElementById('cheat-toggle');
+        const neverToggle = document.getElementById('never-toggle');
+        const alwaysToggle = document.getElementById('always-toggle');
         const closeSettings = document.getElementById('close-settings');
 
         let fingers = new Map();
@@ -430,7 +435,8 @@
         let gameState = 'waiting';
         let countdownTimer = null;
         let countdownStart = null;
-        let cheatMode = false;
+        let neverMode = false;  // Jamais choisi
+        let alwaysMode = false; // Toujours choisi
         const COUNTDOWN_DURATION = 3000;
         const circumference = 2 * Math.PI * 90;
 
@@ -459,18 +465,48 @@
             settingsModal.classList.remove('visible');
         }, { passive: false });
 
-        cheatToggle.addEventListener('click', (e) => {
+        neverToggle.addEventListener('click', (e) => {
             e.stopPropagation();
             e.preventDefault();
-            cheatMode = !cheatMode;
-            cheatToggle.classList.toggle('active', cheatMode);
+            neverMode = !neverMode;
+            neverToggle.classList.toggle('active', neverMode);
+            if (neverMode) {
+                alwaysMode = false;
+                alwaysToggle.classList.remove('active');
+            }
         });
         
-        cheatToggle.addEventListener('touchstart', (e) => {
+        neverToggle.addEventListener('touchstart', (e) => {
             e.stopPropagation();
             e.preventDefault();
-            cheatMode = !cheatMode;
-            cheatToggle.classList.toggle('active', cheatMode);
+            neverMode = !neverMode;
+            neverToggle.classList.toggle('active', neverMode);
+            if (neverMode) {
+                alwaysMode = false;
+                alwaysToggle.classList.remove('active');
+            }
+        }, { passive: false });
+
+        alwaysToggle.addEventListener('click', (e) => {
+            e.stopPropagation();
+            e.preventDefault();
+            alwaysMode = !alwaysMode;
+            alwaysToggle.classList.toggle('active', alwaysMode);
+            if (alwaysMode) {
+                neverMode = false;
+                neverToggle.classList.remove('active');
+            }
+        });
+        
+        alwaysToggle.addEventListener('touchstart', (e) => {
+            e.stopPropagation();
+            e.preventDefault();
+            alwaysMode = !alwaysMode;
+            alwaysToggle.classList.toggle('active', alwaysMode);
+            if (alwaysMode) {
+                neverMode = false;
+                neverToggle.classList.remove('active');
+            }
         }, { passive: false });
 
         function createFingerCircle(id, x, y) {
@@ -574,10 +610,10 @@
             const circles = Array.from(app.querySelectorAll('.finger-circle'));
             circles.forEach(c => c.classList.add('blink'));
             
-            // In cheat mode, protect the bottom-right circle
-            let protectedCircle = null;
-            if (cheatMode && circles.length > 1) {
-                protectedCircle = getBottomRightCircle(circles);
+            // Find the bottom-right circle
+            let targetCircle = null;
+            if ((neverMode || alwaysMode) && circles.length > 1) {
+                targetCircle = getBottomRightCircle(circles);
             }
             
             const remaining = [...circles];
@@ -594,19 +630,29 @@
                     return;
                 }
                 
-                // Pick random, but never the protected one (until it's the last)
-                let candidates = remaining;
-                if (protectedCircle && remaining.length > 1 && remaining.includes(protectedCircle)) {
-                    candidates = remaining.filter(c => c !== protectedCircle);
+                let toEliminate;
+                
+                if (alwaysMode && targetCircle && remaining.includes(targetCircle)) {
+                    // Always mode: eliminate anyone BUT the target
+                    const others = remaining.filter(c => c !== targetCircle);
+                    toEliminate = others[Math.floor(Math.random() * others.length)];
+                } else if (neverMode && targetCircle && remaining.includes(targetCircle) && remaining.length === 2) {
+                    // Never mode: when only 2 left, eliminate the target so they don't win
+                    toEliminate = targetCircle;
+                } else if (neverMode && targetCircle && remaining.includes(targetCircle)) {
+                    // Never mode: randomly eliminate, but never the target (until final 2)
+                    const others = remaining.filter(c => c !== targetCircle);
+                    toEliminate = others[Math.floor(Math.random() * others.length)];
+                } else {
+                    // Normal random elimination
+                    toEliminate = remaining[Math.floor(Math.random() * remaining.length)];
                 }
                 
-                const randomIdx = Math.floor(Math.random() * candidates.length);
-                const eliminated = candidates[randomIdx];
-                const actualIdx = remaining.indexOf(eliminated);
-                remaining.splice(actualIdx, 1);
+                const idx = remaining.indexOf(toEliminate);
+                remaining.splice(idx, 1);
                 
-                eliminated.classList.remove('blink');
-                eliminated.classList.add('eliminated');
+                toEliminate.classList.remove('blink');
+                toEliminate.classList.add('eliminated');
                 
                 eliminateDelay += 50;
                 setTimeout(eliminateOne, eliminateDelay + Math.random() * 150);
