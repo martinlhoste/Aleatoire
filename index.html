@@ -437,19 +437,41 @@
         // Settings handlers
         settingsBtn.addEventListener('click', (e) => {
             e.stopPropagation();
+            e.preventDefault();
             settingsModal.classList.add('visible');
         });
+        
+        settingsBtn.addEventListener('touchstart', (e) => {
+            e.stopPropagation();
+            e.preventDefault();
+            settingsModal.classList.add('visible');
+        }, { passive: false });
 
         closeSettings.addEventListener('click', (e) => {
             e.stopPropagation();
+            e.preventDefault();
             settingsModal.classList.remove('visible');
         });
+        
+        closeSettings.addEventListener('touchstart', (e) => {
+            e.stopPropagation();
+            e.preventDefault();
+            settingsModal.classList.remove('visible');
+        }, { passive: false });
 
         cheatToggle.addEventListener('click', (e) => {
             e.stopPropagation();
+            e.preventDefault();
             cheatMode = !cheatMode;
             cheatToggle.classList.toggle('active', cheatMode);
         });
+        
+        cheatToggle.addEventListener('touchstart', (e) => {
+            e.stopPropagation();
+            e.preventDefault();
+            cheatMode = !cheatMode;
+            cheatToggle.classList.toggle('active', cheatMode);
+        }, { passive: false });
 
         function createFingerCircle(id, x, y) {
             const circle = document.createElement('div');
@@ -669,6 +691,10 @@
         // Touch events
         app.addEventListener('touchstart', (e) => {
             if (gameState !== 'waiting') return;
+            
+            // Ignore touches on buttons
+            if (e.target.closest('#settings-btn, #settings-modal, #reset-btn')) return;
+            
             e.preventDefault();
             
             for (const touch of e.changedTouches) {
